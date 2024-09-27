@@ -1,178 +1,360 @@
-import React from "react";
-// @material-ui/core components
+import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/core/styles";
-import InputLabel from "@material-ui/core/InputLabel";
-// core components
-import GridItem from "components/Grid/GridItem.js";
-import GridContainer from "components/Grid/GridContainer.js";
-import CustomInput from "components/CustomInput/CustomInput.js";
-import Button from "components/CustomButtons/Button.js";
-import Card from "components/Card/Card.js";
-import CardHeader from "components/Card/CardHeader.js";
-import CardAvatar from "components/Card/CardAvatar.js";
-import CardBody from "components/Card/CardBody.js";
-import CardFooter from "components/Card/CardFooter.js";
+import {
+  Button,
+  TextField,
+  Typography,
+  Grid,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Modal,
+  Box,
+} from "@material-ui/core";
 
-import avatar from "assets/img/faces/marc.jpg";
-
-const styles = {
-  cardCategoryWhite: {
-    color: "rgba(255,255,255,.62)",
-    margin: "0",
-    fontSize: "14px",
-    marginTop: "0",
-    marginBottom: "0",
+const useStyles = makeStyles(() => ({
+  root: {
+    flexGrow: 1,
+    padding: "20px",
+    backgroundColor: "#f1f8e9",
   },
-  cardTitleWhite: {
-    color: "#FFFFFF",
-    marginTop: "0px",
-    minHeight: "auto",
-    fontWeight: "300",
-    fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
-    marginBottom: "3px",
-    textDecoration: "none",
+  button: {
+    marginTop: "10px",
   },
-};
+  title: {
+    color: "#388e3c",
+  },
+  table: {
+    minWidth: 650,
+  },
+  modal: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  paper: {
+    backgroundColor: "white",
+    border: "2px solid #000",
+    boxShadow: 24,
+    padding: "20px",
+    borderRadius: "8px",
+  },
+}));
 
-const useStyles = makeStyles(styles);
-
-export default function UserProfile() {
+const PersonasCRUD = () => {
   const classes = useStyles();
+  const [personas, setPersonas] = useState([]);
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
+  const [edad, setEdad] = useState("");
+  const [profesion, setProfesion] = useState("");
+  const [universidad, setUniversidad] = useState("");
+  const [carrera, setCarrera] = useState("");
+  const [trabajo, setTrabajo] = useState("");
+  const [vehiculo, setVehiculo] = useState("");
+  const [estado, setEstado] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [openModal, setOpenModal] = useState(false);
+
+  useEffect(() => {
+    const fetchPersonas = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/personas/get");
+        const data = await response.json();
+        setPersonas(data);
+      } catch (error) {
+        console.error("Error al cargar personas:", error);
+      }
+    };
+
+    fetchPersonas();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const nuevaPersona = {
+      nombre,
+      apellido,
+      edad,
+      profesion,
+      universidad,
+      carrera,
+      trabajo,
+      vehiculo,
+      estado,
+    };
+
+    if (editingId) {
+      try {
+        const response = await fetch(
+          `http://localhost:5001/personas/update/${editingId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(nuevaPersona),
+          }
+        );
+
+        if (response.ok) {
+          const updatedPersona = await response.json();
+          setPersonas((prevPersonas) =>
+            prevPersonas.map((persona) =>
+              persona.idPersona === editingId ? updatedPersona : persona
+            )
+          );
+          setOpenModal(true); // Abrir el modal después de la actualización
+          limpiarFormulario();
+        }
+      } catch (error) {
+        console.error("Error al actualizar persona:", error);
+      }
+    } else {
+      try {
+        const response = await fetch("http://localhost:5001/personas/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(nuevaPersona),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setPersonas((prevPersonas) => [...prevPersonas, data]);
+          limpiarFormulario();
+        }
+      } catch (error) {
+        console.error("Error al agregar persona:", error);
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5001/personas/delete/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        setPersonas((prevPersonas) =>
+          prevPersonas.filter((persona) => persona.idPersona !== id)
+        );
+      }
+    } catch (error) {
+      console.error("Error al eliminar persona:", error);
+    }
+  };
+
+  const handleEdit = (persona) => {
+    setNombre(persona.nombre);
+    setApellido(persona.apellido);
+    setEdad(persona.edad);
+    setProfesion(persona.profesion);
+    setUniversidad(persona.universidad);
+    setCarrera(persona.carrera);
+    setTrabajo(persona.trabajo);
+    setVehiculo(persona.vehiculo);
+    setEstado(persona.estado);
+    setEditingId(persona.idPersona);
+  };
+
+  const limpiarFormulario = () => {
+    setNombre("");
+    setApellido("");
+    setEdad("");
+    setProfesion("");
+    setUniversidad("");
+    setCarrera("");
+    setTrabajo("");
+    setVehiculo("");
+    setEstado("");
+    setEditingId(null);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+  };
+
   return (
-    <div>
-      <GridContainer>
-        <GridItem xs={12} sm={12} md={8}>
-          <Card>
-            <CardHeader color="primary">
-              <h4 className={classes.cardTitleWhite}>Edit Profile</h4>
-              <p className={classes.cardCategoryWhite}>Complete your profile</p>
-            </CardHeader>
-            <CardBody>
-              <GridContainer>
-                <GridItem xs={12} sm={12} md={5}>
-                  <CustomInput
-                    labelText="Company (disabled)"
-                    id="company-disabled"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                    inputProps={{
-                      disabled: true,
-                    }}
-                  />
-                </GridItem>
-                <GridItem xs={12} sm={12} md={3}>
-                  <CustomInput
-                    labelText="Username"
-                    id="username"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                  />
-                </GridItem>
-                <GridItem xs={12} sm={12} md={4}>
-                  <CustomInput
-                    labelText="Email address"
-                    id="email-address"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                  />
-                </GridItem>
-              </GridContainer>
-              <GridContainer>
-                <GridItem xs={12} sm={12} md={6}>
-                  <CustomInput
-                    labelText="First Name"
-                    id="first-name"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                  />
-                </GridItem>
-                <GridItem xs={12} sm={12} md={6}>
-                  <CustomInput
-                    labelText="Last Name"
-                    id="last-name"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                  />
-                </GridItem>
-              </GridContainer>
-              <GridContainer>
-                <GridItem xs={12} sm={12} md={4}>
-                  <CustomInput
-                    labelText="City"
-                    id="city"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                  />
-                </GridItem>
-                <GridItem xs={12} sm={12} md={4}>
-                  <CustomInput
-                    labelText="Country"
-                    id="country"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                  />
-                </GridItem>
-                <GridItem xs={12} sm={12} md={4}>
-                  <CustomInput
-                    labelText="Postal Code"
-                    id="postal-code"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                  />
-                </GridItem>
-              </GridContainer>
-              <GridContainer>
-                <GridItem xs={12} sm={12} md={12}>
-                  <InputLabel style={{ color: "#AAAAAA" }}>About me</InputLabel>
-                  <CustomInput
-                    labelText="Lamborghini Mercy, Your chick she so thirsty, I'm in that two seat Lambo."
-                    id="about-me"
-                    formControlProps={{
-                      fullWidth: true,
-                    }}
-                    inputProps={{
-                      multiline: true,
-                      rows: 5,
-                    }}
-                  />
-                </GridItem>
-              </GridContainer>
-            </CardBody>
-            <CardFooter>
-              <Button color="primary">Update Profile</Button>
-            </CardFooter>
-          </Card>
-        </GridItem>
-        <GridItem xs={12} sm={12} md={4}>
-          <Card profile>
-            <CardAvatar profile>
-              <a href="#pablo" onClick={(e) => e.preventDefault()}>
-                <img src={avatar} alt="..." />
-              </a>
-            </CardAvatar>
-            <CardBody profile>
-              <h6 className={classes.cardCategory}>CEO / CO-FOUNDER</h6>
-              <h4 className={classes.cardTitle}>Alec Thompson</h4>
-              <p className={classes.description}>
-                Don{"'"}t be scared of the truth because we need to restart the
-                human foundation in truth And I love you like Kanye loves Kanye
-                I love Rick Owens’ bed design but the back is...
-              </p>
-              <Button color="primary" round>
-                Follow
-              </Button>
-            </CardBody>
-          </Card>
-        </GridItem>
-      </GridContainer>
+    <div className={classes.root}>
+      <Typography variant="h4" className={classes.title}>
+        CRUD de Personas
+      </Typography>
+      <form onSubmit={handleSubmit}>
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <TextField
+              label="Nombre"
+              variant="outlined"
+              fullWidth
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Apellido"
+              variant="outlined"
+              fullWidth
+              value={apellido}
+              onChange={(e) => setApellido(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Edad"
+              variant="outlined"
+              fullWidth
+              type="number"
+              value={edad}
+              onChange={(e) => setEdad(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Profesión"
+              variant="outlined"
+              fullWidth
+              value={profesion}
+              onChange={(e) => setProfesion(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Universidad"
+              variant="outlined"
+              fullWidth
+              value={universidad}
+              onChange={(e) => setUniversidad(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Carrera"
+              variant="outlined"
+              fullWidth
+              value={carrera}
+              onChange={(e) => setCarrera(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Trabajo"
+              variant="outlined"
+              fullWidth
+              value={trabajo}
+              onChange={(e) => setTrabajo(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Vehículo"
+              variant="outlined"
+              fullWidth
+              value={vehiculo}
+              onChange={(e) => setVehiculo(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <TextField
+              label="Estado"
+              variant="outlined"
+              fullWidth
+              value={estado}
+              onChange={(e) => setEstado(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              className={classes.button}
+            >
+              {editingId ? "Actualizar" : "Agregar"}
+            </Button>
+          </Grid>
+        </Grid>
+      </form>
+
+      <TableContainer component={Paper}>
+        <Table className={classes.table} aria-label="tabla de personas">
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Nombre</TableCell>
+              <TableCell>Apellido</TableCell>
+              <TableCell>Edad</TableCell>
+              <TableCell>Profesión</TableCell>
+              <TableCell>Universidad</TableCell>
+              <TableCell>Carrera</TableCell>
+              <TableCell>Trabajo</TableCell>
+              <TableCell>Vehículo</TableCell>
+              <TableCell>Estado</TableCell>
+              <TableCell>Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {personas.map((persona) => (
+              <TableRow key={persona.idPersona}>
+                <TableCell>{persona.idPersona}</TableCell>
+                <TableCell>{persona.nombre}</TableCell>
+                <TableCell>{persona.apellido}</TableCell>
+                <TableCell>{persona.edad}</TableCell>
+                <TableCell>{persona.profesion}</TableCell>
+                <TableCell>{persona.universidad}</TableCell>
+                <TableCell>{persona.carrera}</TableCell>
+                <TableCell>{persona.trabajo}</TableCell>
+                <TableCell>{persona.vehiculo}</TableCell>
+                <TableCell>{persona.estado}</TableCell>
+                <TableCell>
+                  <Button onClick={() => handleEdit(persona)}>Editar</Button>
+                  <Button onClick={() => handleDelete(persona.idPersona)}>
+                    Eliminar
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Modal para refrescar página */}
+      <Modal
+        open={openModal}
+        onClose={handleCloseModal}
+        className={classes.modal}
+      >
+        <Box className={classes.paper}>
+          <Typography variant="h6">¡Actualización Exitosa!</Typography>
+          <Typography variant="body1">
+            Por favor, refresca la página para ver los cambios.
+          </Typography>
+          <Button
+            onClick={handleCloseModal}
+            color="primary"
+            variant="contained"
+          >
+            Cerrar
+          </Button>
+        </Box>
+      </Modal>
     </div>
   );
-}
+};
+
+export default PersonasCRUD;
